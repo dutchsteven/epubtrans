@@ -36,7 +36,7 @@ echo "Downloading epubtrans ${DOWNLOAD_URL}..."
 curl -L -o epubtrans.tar.gz "$DOWNLOAD_URL"
 
 echo "Extracting..."
-tar -xzf epubtrans.tar.gz -C epubtrans
+tar -xzf epubtrans.tar.gz
 
 echo "Installing..."
 sudo mv epubtrans /usr/local/bin/
