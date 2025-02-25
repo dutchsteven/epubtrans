@@ -33,7 +33,7 @@ OS_ARCH=$(get_os_arch)
 #DOWNLOAD_URL="https://github.com/dutchsteven/epubtrans/releases/download/${VERSION}/epubtrans_${VERSION#v}_${OS_ARCH}.tar.gz"
 DOWNLOAD_URL="https://github.com/dutchsteven/epubtrans/archive/refs/tags/English.tar.gz"
 
-echo "Downloading epubtrans ${VERSION} for ${OS_ARCH}..."
+echo "Downloading epubtrans ${DOWNLOAD_URL}..."
 curl -L -o epubtrans.tar.gz "$DOWNLOAD_URL"
 
 echo "Extracting..."
