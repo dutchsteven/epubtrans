@@ -20,4 +20,4 @@ func main() {
 		slog.Error(err.Error())
 		os.Exit(1)
 	}
-}
+} 
