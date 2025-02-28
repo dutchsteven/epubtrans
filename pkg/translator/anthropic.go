@@ -41,7 +41,7 @@ type UsageMetadata struct {
 	PromptExamples []string                  `json:"prompt_examples"`
 	TokenUsage     atomic.Uint64             `json:"token_usage"`
 	TokenUsageList []anthropic.MessagesUsage `json:"token_usage_list"`
-}
+} 
 
 func GetAnthropicTranslator(cfg *Config) (*Anthropic, error) {
 	var err error
