@@ -12,11 +12,11 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/nguyenvanduocit/epubtrans/pkg/processor"
+	"github.com/dutchsteven/epubtrans/pkg/processor"
 	"github.com/spf13/cobra"
 	"golang.org/x/net/html"
 
-	"github.com/nguyenvanduocit/epubtrans/pkg/util"
+	"github.com/dutchsteven/epubtrans/pkg/util"
 )
 
 var blacklist = map[string]bool{

@@ -15,11 +15,11 @@ import (
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
+	"github.com/dutchsteven/epubtrans/pkg/loader"
+	"github.com/dutchsteven/epubtrans/pkg/processor"
+	"github.com/dutchsteven/epubtrans/pkg/translator"
+	"github.com/dutchsteven/epubtrans/pkg/util"
 	"github.com/liushuangls/go-anthropic/v2"
-	"github.com/nguyenvanduocit/epubtrans/pkg/loader"
-	"github.com/nguyenvanduocit/epubtrans/pkg/processor"
-	"github.com/nguyenvanduocit/epubtrans/pkg/translator"
-	"github.com/nguyenvanduocit/epubtrans/pkg/util"
 	"github.com/spf13/cobra"
 	"golang.org/x/time/rate"
 )

@@ -20,9 +20,9 @@ import (
 	"github.com/PuerkitoBio/goquery"
 	"github.com/gofiber/fiber/v2"
 	"github.com/liushuangls/go-anthropic/v2"
-	"github.com/nguyenvanduocit/epubtrans/pkg/loader"
-	"github.com/nguyenvanduocit/epubtrans/pkg/translator"
-	"github.com/nguyenvanduocit/epubtrans/pkg/util"
+	"github.com/dutchsteven/epubtrans/pkg/loader"
+	"github.com/dutchsteven/epubtrans/pkg/translator"
+	"github.com/dutchsteven/epubtrans/pkg/util"
 	"github.com/spf13/cobra"
 )
 
@@ -120,7 +120,7 @@ func generateTOCHTML(navPoints []NavPoint, level int) string {
 
 const (
 	githubRawContent = "https://raw.githubusercontent.com"
-	userRepo         = "nguyenvanduocit/epubtrans"
+	userRepo         = "dutchsteven/epubtrans"
 	branch           = "main"
 )
 

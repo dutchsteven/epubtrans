@@ -86,7 +86,7 @@ func runSelfUpgrade(cmd *cobra.Command, args []string) error {
 }
 
 func getLatestRelease() (*GithubRelease, error) {
-	resp, err := http.Get("https://api.github.com/repos/nguyenvanduocit/epubtrans/releases/latest")
+	resp, err := http.Get("https://api.github.com/repos/dutchsteven/epubtrans/releases/latest")
 	if err != nil {
 		return nil, err
 	}
@@ -184,7 +184,7 @@ func downloadFile(cmd *cobra.Command, url string) (*os.File, error) {
 
 func verifyChecksum(filePath, assetName string, release *GithubRelease) error {
 	// Download the checksum file
-	checksumURL := fmt.Sprintf("https://github.com/nguyenvanduocit/epubtrans/releases/download/%s/epubtrans_%s_checksums.txt", release.TagName, strings.TrimPrefix(release.TagName, "v"))
+	checksumURL := fmt.Sprintf("https://github.com/dutchsteven/epubtrans/releases/download/%s/epubtrans_%s_checksums.txt", release.TagName, strings.TrimPrefix(release.TagName, "v"))
 	resp, err := http.Get(checksumURL)
 	if err != nil {
 		return fmt.Errorf("failed to download checksum file: %w", err)
