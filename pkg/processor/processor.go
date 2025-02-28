@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"regexp"
 
-	"github.com/dutchsteven/epubtrans/pkg/loader
+	"github.com/dutchsteven/epubtrans/pkg/loader"
 	"github.com/pkg/errors"
 	"golang.org/x/sync/errgroup"
 )
