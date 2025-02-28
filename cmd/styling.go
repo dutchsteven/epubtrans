@@ -9,8 +9,8 @@ import (
 	"runtime"
 	"syscall"
 
-	"github.com/nguyenvanduocit/epubtrans/pkg/processor"
-	"github.com/nguyenvanduocit/epubtrans/pkg/util"
+	"github.com/dutchsteven/epubtrans/pkg/processor"
+	"github.com/dutchsteven/epubtrans/pkg/util"
 	"github.com/spf13/cobra"
 )
 

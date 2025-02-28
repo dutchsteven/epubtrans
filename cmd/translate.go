@@ -15,11 +15,11 @@ import (
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
+	"github.com/dutchsteven/epubtrans/pkg/loader"
+	"github.com/dutchsteven/epubtrans/pkg/processor"
+	"github.com/dutchsteven/epubtrans/pkg/translator"
+	"github.com/dutchsteven/epubtrans/pkg/util"
 	"github.com/liushuangls/go-anthropic/v2"
-	"github.com/nguyenvanduocit/epubtrans/pkg/loader"
-	"github.com/nguyenvanduocit/epubtrans/pkg/processor"
-	"github.com/nguyenvanduocit/epubtrans/pkg/translator"
-	"github.com/nguyenvanduocit/epubtrans/pkg/util"
 	"github.com/spf13/cobra"
 	"golang.org/x/time/rate"
 )
@@ -131,84 +131,84 @@ func runTranslate(cmd *cobra.Command, args []string) error {
 }
 
 func processFileDirectly(ctx context.Context, filePath string, translator translator.Translator, limiter *rate.Limiter, bookName string) error {
-    fmt.Printf("\nProcessing file: %s\n", path.Base(filePath))
-    
-    doc, err := openAndReadFile(filePath)
-    if err != nil {
-        return err
-    }
+	fmt.Printf("\nProcessing file: %s\n", path.Base(filePath))
 
-    ensureUTF8Charset(doc)
+	doc, err := openAndReadFile(filePath)
+	if err != nil {
+		return err
+	}
 
-    selector := fmt.Sprintf("[%s]:not([%s])", util.ContentIdKey, util.TranslationByIdKey)
-    elements := doc.Find(selector)
+	ensureUTF8Charset(doc)
 
-    if elements.Length() == 0 {
-        fmt.Printf("No elements to translate in %s\n", path.Base(filePath))
-        return nil
-    }
+	selector := fmt.Sprintf("[%s]:not([%s])", util.ContentIdKey, util.TranslationByIdKey)
+	elements := doc.Find(selector)
 
-    fmt.Printf("Found %d elements to translate in %s\n", 
-        elements.Length(), path.Base(filePath))
+	if elements.Length() == 0 {
+		fmt.Printf("No elements to translate in %s\n", path.Base(filePath))
+		return nil
+	}
 
-    // Create batches directly
-    var currentBatch translationBatch
-    maxBatchLength := 4000
+	fmt.Printf("Found %d elements to translate in %s\n",
+		elements.Length(), path.Base(filePath))
 
-    elements.Each(func(i int, contentEl *goquery.Selection) {
-        select {
-        case <-ctx.Done():
-            return
-        default:
-            htmlContent, err := contentEl.Html()
-            if err != nil || len(htmlContent) <= 1 {
-                return
-            }
+	// Create batches directly
+	var currentBatch translationBatch
+	maxBatchLength := 3000
 
-            element := elementToTranslate{
-                filePath:      filePath,
-                contentEl:     contentEl,
-                doc:           doc,
-                totalElements: elements.Length(),
-                index:         i,
-                content:      htmlContent,
-            }
+	elements.Each(func(i int, contentEl *goquery.Selection) {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+			htmlContent, err := contentEl.Html()
+			if err != nil || len(htmlContent) <= 1 {
+				return
+			}
 
-            currentBatchLength := getBatchLength(&currentBatch)
-            if currentBatchLength+len(htmlContent) > maxBatchLength && len(currentBatch.elements) > 0 {
-                // Process current batch
-                processBatch(ctx, filePath, currentBatch, translator, limiter, bookName)
-                // Start new batch
-                currentBatch = translationBatch{
-                    elements: []elementToTranslate{element},
-                }
-            } else {
-                currentBatch.elements = append(currentBatch.elements, element)
-            }
-        }
-    })
+			element := elementToTranslate{
+				filePath:      filePath,
+				contentEl:     contentEl,
+				doc:           doc,
+				totalElements: elements.Length(),
+				index:         i,
+				content:       htmlContent,
+			}
 
-    // Process final batch if not empty
-    if len(currentBatch.elements) > 0 {
-        processBatch(ctx, filePath, currentBatch, translator, limiter, bookName)
-    }
+			currentBatchLength := getBatchLength(&currentBatch)
+			if currentBatchLength+len(htmlContent) > maxBatchLength && len(currentBatch.elements) > 0 {
+				// Process current batch
+				processBatch(ctx, filePath, currentBatch, translator, limiter, bookName)
+				// Start new batch
+				currentBatch = translationBatch{
+					elements: []elementToTranslate{element},
+				}
+			} else {
+				currentBatch.elements = append(currentBatch.elements, element)
+			}
+		}
+	})
 
-    return nil
+	// Process final batch if not empty
+	if len(currentBatch.elements) > 0 {
+		processBatch(ctx, filePath, currentBatch, translator, limiter, bookName)
+	}
+
+	return nil
 }
 
 func extractBookName(unzipPath string) (string, error) {
-    container, err := loader.ParseContainer(unzipPath)
-    if err != nil {
-        return "", fmt.Errorf("failed to parse container: %w", err)
-    }
+	container, err := loader.ParseContainer(unzipPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse container: %w", err)
+	}
 
-    packagePath := path.Join(unzipPath, container.Rootfile.FullPath)
-    pkg, err := loader.ParsePackage(packagePath)
-    if err != nil {
-        return "", fmt.Errorf("failed to parse package: %w", err)
-    }
+	packagePath := path.Join(unzipPath, container.Rootfile.FullPath)
+	pkg, err := loader.ParsePackage(packagePath)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse package: %w", err)
+	}
 
-    return pkg.Metadata.Title, nil
+	return pkg.Metadata.Title, nil
 }
 
 func getBatchLength(batch *translationBatch) int {
@@ -224,13 +224,13 @@ func processBatch(ctx context.Context, filePath string, batch translationBatch, 
 		return
 	}
 
-	fmt.Printf("\nTranslating batch from file %s (segments: %d; length: %d)\n", 
+	fmt.Printf("\nTranslating batch from file %s (segments: %d; length: %d)\n",
 		path.Base(filePath), len(batch.elements), getBatchLength(&batch))
 
 	// Combine contents with more distinct markers and instructions
 	var combinedContent strings.Builder
 	combinedContent.WriteString("Translate the following HTML segments. Each segment is marked with BEGIN_SEGMENT_X and END_SEGMENT_X markers. Preserve these markers exactly in your response and maintain all HTML tags.\n\n")
-	
+
 	for i, element := range batch.elements {
 		combinedContent.WriteString(fmt.Sprintf("<SEGMENT_%d>\n%s\n</SEGMENT_%d>\n\n", i, element.content, i))
 	}
@@ -245,7 +245,7 @@ func processBatch(ctx context.Context, filePath string, batch translationBatch, 
 	// Split translated content and process individual elements
 	translations := splitTranslations(translatedContent)
 	if len(translations) != len(batch.elements) {
-		fmt.Printf("Translation segments mismatch for %s: got %d, expected %d\n", 
+		fmt.Printf("Translation segments mismatch for %s: got %d, expected %d\n",
 			path.Base(filePath), len(translations), len(batch.elements))
 		return
 	}
@@ -273,7 +273,7 @@ func processBatch(ctx context.Context, filePath string, batch translationBatch, 
 func splitTranslations(translatedContent string) []string {
 	var translations []string
 	segments := strings.Split(translatedContent, "<SEGMENT_")
-	
+
 	for i := 1; i < len(segments); i++ {
 		if parts := strings.Split(segments[i], "</SEGMENT_"); len(parts) > 1 {
 			// Extract segment number and content
@@ -284,7 +284,7 @@ func splitTranslations(translatedContent string) []string {
 			}
 		}
 	}
-	
+
 	return translations
 }
 
@@ -349,21 +349,14 @@ func isTranslationValid(original, translated string) bool {
 		return true
 	}
 
-	// Check if translation is suspiciously long or short
-	originalWords := countWords(original)
-	translatedWords := countWords(translated)
-	if translatedWords > originalWords*5 || translatedWords < originalWords/5 {
-		return false
-	}
-
 	// Ensure all HTML tags are preserved
 	originalTags := extractHTMLTags(original)
 	translatedTags := extractHTMLTags(translated)
-	
+
 	if len(originalTags) != len(translatedTags) {
 		return false
 	}
-	
+
 	for i := range originalTags {
 		if originalTags[i] != translatedTags[i] {
 			return false
@@ -379,11 +372,11 @@ func extractHTMLTags(html string) []string {
 	if err != nil {
 		return tags
 	}
-	
+
 	doc.Find("*").Each(func(i int, s *goquery.Selection) {
 		tags = append(tags, goquery.NodeName(s))
 	})
-	
+
 	return tags
 }
 
