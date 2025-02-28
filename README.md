@@ -1,4 +1,4 @@
-# Epub Translator
+# Epub Translator 
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/dutchsteven/epubtrans/blob/main/scripts/epub-translator-colab.ipynb)
 
