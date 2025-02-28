@@ -1,5 +1,49 @@
 # Changelog
 
+## [3.0.0](https://github.com/dutchsteven/epubtrans/compare/v2.11.0...v3.0.0) (2025-02-28)
+
+
+### ⚠ BREAKING CHANGES
+
+* fix unpack command
+
+### Features
+
+* allow slyting command ([fd3c35b](https://github.com/dutchsteven/epubtrans/commit/fd3c35b9a5f1def00edc5b6a56abd94461a4a95f))
+* **cmd:** add self-upgrade functionality and refactor version handling ([70d91c0](https://github.com/dutchsteven/epubtrans/commit/70d91c07a4696b87d210579fba29b6e99e763efa))
+* enhance translation instruction handling ([c6673e2](https://github.com/dutchsteven/epubtrans/commit/c6673e26e17b2057340c054a969ade266db1aee7))
+* impelement batch ([87142e9](https://github.com/dutchsteven/epubtrans/commit/87142e9c1245e04c552deedb0ba60244b21ebad9))
+* improve ([32e8543](https://github.com/dutchsteven/epubtrans/commit/32e8543f70961cad5b245e76de77fd9ff92f1950))
+* improve by batch translate ([aee876d](https://github.com/dutchsteven/epubtrans/commit/aee876d0cde10ca25f19ffee947cdfe393e954ec))
+* improve command docs and example ([ddacd2e](https://github.com/dutchsteven/epubtrans/commit/ddacd2e11f2faf068c5bc01cc08a6a7777f633b3))
+* improve the eidtor ([b949086](https://github.com/dutchsteven/epubtrans/commit/b949086fe86c8ee46193ee69e3b0992dad09d06e))
+* **install:** add installation guide and scripts ([fb4fd3f](https://github.com/dutchsteven/epubtrans/commit/fb4fd3f90701d8db78161eada3e3d87f6b091003))
+* remove numWorkers flag from translate command ([d4012db](https://github.com/dutchsteven/epubtrans/commit/d4012dbc0be804cfdcb0e0710030cb15af0d2a15))
+* **scripts:** remove unused imports in epub-translator-colab.ipynb ([a9bedf0](https://github.com/dutchsteven/epubtrans/commit/a9bedf0309df869008e614a47b566fc1e2355c16))
+* **scripts:** update colab notebook ([e6301b2](https://github.com/dutchsteven/epubtrans/commit/e6301b21db0e8307a0d15cbb15bf0b21c9a24b2e))
+* support colab ([7e1ad2e](https://github.com/dutchsteven/epubtrans/commit/7e1ad2ee10de7c7124077a402f5e4e5155893ee7))
+* support language config ([8f2c740](https://github.com/dutchsteven/epubtrans/commit/8f2c740d442773bb3c9efe121a62410e200beea6))
+* support multiple prompt ([1b25986](https://github.com/dutchsteven/epubtrans/commit/1b25986daeb88813ea9c42d8dc095c0caa8337bf))
+* support serve command ([57e3414](https://github.com/dutchsteven/epubtrans/commit/57e34141dbddd63a6aab67bf97bd99fc72e91bcd))
+* **toc:** open table of contents links in new tab ([7108fa2](https://github.com/dutchsteven/epubtrans/commit/7108fa2be9acc1013e328691944db6c4d844b9e0))
+* **translation:** enhance translation system and add metadata tracking ([e6a22b4](https://github.com/dutchsteven/epubtrans/commit/e6a22b41f3d45e03d23b7d9680da7ad90e9ca1fb))
+* **translator:** improve translation process and error handling ([3f0fd66](https://github.com/dutchsteven/epubtrans/commit/3f0fd66fcc5f1f1a8c8ab83939935aad935fdf6a))
+* update build config ([f82e39f](https://github.com/dutchsteven/epubtrans/commit/f82e39f1b212b0cb143fc5b35b8c399cfd8231f3))
+* update build config ([1d110ef](https://github.com/dutchsteven/epubtrans/commit/1d110efbcc33c15e22e80589ba5e92584a5d864f))
+* Update translation logic and metadata tracking ([e4342e4](https://github.com/dutchsteven/epubtrans/commit/e4342e41e0b29408579b5c58cde11aa387ba859e))
+* **upgrade:** improve checksum verification and binary installation ([0210aca](https://github.com/dutchsteven/epubtrans/commit/0210acab019cabf1f729fd7a642b7edb48c32701))
+
+
+### Bug Fixes
+
+* correct serve assest ([768735e](https://github.com/dutchsteven/epubtrans/commit/768735e1ad5fba47dde882b804f257289fc9f306))
+* fix unpack command ([8a30cf7](https://github.com/dutchsteven/epubtrans/commit/8a30cf72a46b19314e26093ae8c8f4fc77ed11ce))
+* remove unused folder ([cf12268](https://github.com/dutchsteven/epubtrans/commit/cf1226834bc5a38d22ef2ef6ab3716582e227017))
+* **translator:** improve error handling and logging ([8cb3a00](https://github.com/dutchsteven/epubtrans/commit/8cb3a005566310b28c0e8c9ee2ba61bcf2b455a3))
+* update error message ([0a292f9](https://github.com/dutchsteven/epubtrans/commit/0a292f985763eff2f759521f7b55082fb290e6d4))
+* update originalContent on blur in enableContentEditable function ([8241aad](https://github.com/dutchsteven/epubtrans/commit/8241aada33da27f41fc9480f0ccce8c9c8b7ada8))
+* **util:** improve error handling and add tests for GetUnzipDestination ([e9690ba](https://github.com/dutchsteven/epubtrans/commit/e9690ba0eb95885789ddac2208c08fb901441902))
+
 ## [2.11.0](https://github.com/dutchsteven/epubtrans/compare/v2.10.0...v2.11.0) (2024-11-02)
 
 
