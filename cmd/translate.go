@@ -62,7 +62,7 @@ func translateWithHermesOpenAPI(content string, sourceLang, targetLang, bookTitl
 Maintain all HTML tags exactly as they are. Only output the translated text with HTML tags preserved.
 Book title: %s
 
-Do not add any explanations, introductions, or extra text.`, sourceLang, targetLang, bookTitle)
+DO NOT output any reasoning, thinking, explanations, or extra text. Respond ONLY with the translation.`, sourceLang, targetLang, bookTitle)
 
 	request := HermesOpenAPIRequest{
 		Model:       "qwen",
@@ -79,7 +79,7 @@ Do not add any explanations, introductions, or extra text.`, sourceLang, targetL
 		return "", fmt.Errorf("failed to marshal request: %w", err)
 	}
 
-	client := &http.Client{Timeout: 300 * time.Second}
+	client := &http.Client{Timeout: 600 * time.Second}
 	req, err := http.NewRequest("POST", baseURL, bytes.NewBuffer(jsonData))
 	if err != nil {
 		return "", fmt.Errorf("failed to create request: %w", err)
