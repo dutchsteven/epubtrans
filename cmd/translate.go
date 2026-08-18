@@ -59,10 +59,10 @@ func translateWithHermesOpenAPI(content string, sourceLang, targetLang, bookTitl
 
 	// Create translation prompt
 	systemPrompt := fmt.Sprintf(`You are a professional translator. Translate the following text from %s to %s.
-Maintain all HTML tags exactly as they are. Only output the translated text with HTML tags preserved.
+Maintain all HTML tags exactly as they are. 
 Book title: %s
 
-DO NOT output any reasoning, thinking, explanations, or extra text. Respond ONLY with the translation.`, sourceLang, targetLang, bookTitle)
+`, sourceLang, targetLang, bookTitle)
 
 	request := HermesOpenAPIRequest{
 		Model:       "qwen",
@@ -79,7 +79,7 @@ DO NOT output any reasoning, thinking, explanations, or extra text. Respond ONLY
 		return "", fmt.Errorf("failed to marshal request: %w", err)
 	}
 
-	client := &http.Client{Timeout: 600 * time.Second}
+	client := &http.Client{Timeout: 900 * time.Second}
 	req, err := http.NewRequest("POST", baseURL, bytes.NewBuffer(jsonData))
 	if err != nil {
 		return "", fmt.Errorf("failed to create request: %w", err)
