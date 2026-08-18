@@ -499,7 +499,7 @@ func isTranslationValid(original, translated string) bool {
 	}
 
 	// If translation is empty or significantly shorter, reject
-	if len(translated) < len(original)/2 {
+	if len(translated) < len(original)/10 {
 		return false
 	}
 

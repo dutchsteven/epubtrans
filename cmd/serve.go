@@ -357,7 +357,7 @@ func runServe(cmd *cobra.Command, args []string) error {
 		}
 
 		sourceLang := c.FormValue("source", "English")
-		targetLang := c.FormValue("target", "Dutch")
+		targetLang := c.FormValue("target", "Chinese (Simplified)")
 		isBilingual := c.FormValue("bilingual") == "true"
 
 		// Save uploaded file
