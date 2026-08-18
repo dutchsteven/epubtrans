@@ -302,7 +302,7 @@ func processFileDirectly(ctx context.Context, filePath string, translator transl
 
 	// Create batches directly
 	var currentBatch translationBatch
-	maxBatchLength := 2000
+	maxBatchLength := 1000
 
 	elements.Each(func(i int, contentEl *goquery.Selection) {
 		select {
