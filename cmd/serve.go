@@ -185,7 +185,8 @@ func runServe(cmd *cobra.Command, args []string) error {
 		}
 		bookTitle = "Untitled"
 	} else {
-		opfPath := filepath.Join(unpackedEpubPath, container.Rootfile.FullPath)
+		if container == nil { return c.Status(500).SendString("No EPUB package loaded") }
+	opfPath := filepath.Join(unpackedEpubPath, container.Rootfile.FullPath)
 		pkg, err = loader.ParsePackage(opfPath)
 		if err != nil {
 			return fmt.Errorf("error parsing package: %v", err)
@@ -268,7 +269,8 @@ func runServe(cmd *cobra.Command, args []string) error {
 	}
 
 	app.Get("/toc.html", func(c *fiber.Ctx) error {
-		opfPath := filepath.Join(unpackedEpubPath, container.Rootfile.FullPath)
+		if container == nil { return c.Status(500).SendString("No EPUB package loaded") }
+	opfPath := filepath.Join(unpackedEpubPath, container.Rootfile.FullPath)
 		pkg, err := loader.ParsePackage(opfPath)
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).SendString(fmt.Sprintf("Error parsing package: %v", err))
@@ -482,7 +484,8 @@ func runServe(cmd *cobra.Command, args []string) error {
 
 	// API endpoint to get ebook information
 	app.Get("/api/info", func(c *fiber.Ctx) error {
-		opfPath := filepath.Join(unpackedEpubPath, container.Rootfile.FullPath)
+		if container == nil { return c.Status(500).SendString("No EPUB package loaded") }
+	opfPath := filepath.Join(unpackedEpubPath, container.Rootfile.FullPath)
 		pkg, err := loader.ParsePackage(opfPath)
 		if err != nil {
 			return c.Status(500).SendString(fmt.Sprintf("Error parsing package: %v", err))
@@ -493,7 +496,8 @@ func runServe(cmd *cobra.Command, args []string) error {
 
 	// API endpoint to get manifest items
 	app.Get("/api/manifest", func(c *fiber.Ctx) error {
-		opfPath := filepath.Join(unpackedEpubPath, container.Rootfile.FullPath)
+		if container == nil { return c.Status(500).SendString("No EPUB package loaded") }
+	opfPath := filepath.Join(unpackedEpubPath, container.Rootfile.FullPath)
 		pkg, err := loader.ParsePackage(opfPath)
 		if err != nil {
 			return c.Status(500).SendString(fmt.Sprintf("Error parsing package: %v", err))
@@ -504,7 +508,8 @@ func runServe(cmd *cobra.Command, args []string) error {
 
 	// API endpoint to get spine items
 	app.Get("/api/spine", func(c *fiber.Ctx) error {
-		opfPath := filepath.Join(unpackedEpubPath, container.Rootfile.FullPath)
+		if container == nil { return c.Status(500).SendString("No EPUB package loaded") }
+	opfPath := filepath.Join(unpackedEpubPath, container.Rootfile.FullPath)
 		pkg, err := loader.ParsePackage(opfPath)
 		if err != nil {
 			return c.Status(500).SendString(fmt.Sprintf("Error parsing package: %v", err))
