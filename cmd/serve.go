@@ -13,6 +13,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"embed"
@@ -26,7 +27,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//go:embed assets/app.js assets/app.css
+//go:embed assets/app.js assets/app.css assets/index.html
 var embeddedAssets embed.FS
 
 var Serve = &cobra.Command{
@@ -163,20 +164,34 @@ func runServe(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("the specified directory does not exist: %s", unpackedEpubPath)
 	}
 
-	// Parse the package to get book information
+	// Try to parse the container - make it optional for upload-only mode
 	container, err := loader.ParseContainer(unpackedEpubPath)
+	var pkg *loader.Package
+	var bookTitle string
+	
 	if err != nil {
-		return err
+		slog.Warn("No EPUB package found, running in upload-only mode: " + err.Error())
+		// Create a dummy package for upload-only mode
+		pkg = &loader.Package{
+			Metadata: loader.Metadata{
+				Title: "Untitled",
+			},
+			Manifest: loader.Manifest{
+				Items: []loader.Item{},
+			},
+			Spine: loader.Spine{
+				ItemRefs: []loader.ItemRef{},
+			},
+		}
+		bookTitle = "Untitled"
+	} else {
+		opfPath := filepath.Join(unpackedEpubPath, container.Rootfile.FullPath)
+		pkg, err = loader.ParsePackage(opfPath)
+		if err != nil {
+			return fmt.Errorf("error parsing package: %v", err)
+		}
+		bookTitle = pkg.Metadata.Title
 	}
-
-	opfPath := filepath.Join(unpackedEpubPath, container.Rootfile.FullPath)
-	pkg, err := loader.ParsePackage(opfPath)
-	if err != nil {
-		return fmt.Errorf("error parsing package: %v", err)
-	}
-
-	// Get the book title
-	bookTitle := pkg.Metadata.Title
 
 	slog.Info("Book title: " + bookTitle)
 
@@ -184,9 +199,36 @@ func runServe(cmd *cobra.Command, args []string) error {
 		DisableStartupMessage: true,
 	})
 
-	var scriptToInject = []byte(`<script src="/assets/app.js"></script><link rel="stylesheet" href="/assets/app.css">`)
+	// Serve the main index.html
+	app.Get("/", func(c *fiber.Ctx) error {
+		index, err := embeddedAssets.ReadFile("assets/index.html")
+		if err != nil {
+			return c.Status(500).SendString("Error loading index.html")
+		}
+		c.Set("Content-Type", "text/html; charset=utf-8")
+		return c.Send(index)
+	})
 
-	// Proxy route for assets
+	// Serve assets
+	app.Get("/assets/app.js", func(c *fiber.Ctx) error {
+		js, err := embeddedAssets.ReadFile("assets/app.js")
+		if err != nil {
+			return c.Status(500).SendString("Error loading app.js")
+		}
+		c.Set("Content-Type", "application/javascript; charset=utf-8")
+		return c.Send(js)
+	})
+
+	app.Get("/assets/app.css", func(c *fiber.Ctx) error {
+		css, err := embeddedAssets.ReadFile("assets/app.css")
+		if err != nil {
+			return c.Status(500).SendString("Error loading app.css")
+		}
+		c.Set("Content-Type", "text/css; charset=utf-8")
+		return c.Send(css)
+	})
+
+	// Proxy route for assets (fallback to GitHub)
 	app.Get("/assets/:filename", func(c *fiber.Ctx) error {
 
 		filename := c.Params("filename")
@@ -219,7 +261,11 @@ func runServe(cmd *cobra.Command, args []string) error {
 		return c.Send(body)
 	})
 
-	contentDirPath := path.Dir(path.Join(unpackedEpubPath, container.Rootfile.FullPath))
+	// Set content directory path - use unpackedEpubPath if container is nil
+	contentDirPath := unpackedEpubPath
+	if container != nil {
+		contentDirPath = path.Dir(path.Join(unpackedEpubPath, container.Rootfile.FullPath))
+	}
 
 	app.Get("/toc.html", func(c *fiber.Ctx) error {
 		opfPath := filepath.Join(unpackedEpubPath, container.Rootfile.FullPath)
@@ -294,13 +340,8 @@ func runServe(cmd *cobra.Command, args []string) error {
 				return nil
 			}
 
-			// Create a new slice with the additional capacity
-			newBody := make([]byte, len(body)+len(scriptToInject))
-
-			// Copy the parts of the original body and insert the script
-			copy(newBody, body[:pos])
-			copy(newBody[pos:], scriptToInject)
-			copy(newBody[pos+len(scriptToInject):], body[pos:])
+			// Inject the script before </body>
+			newBody := append(append(body[:pos], []byte(`<script src="/assets/app.js"></script><link rel="stylesheet" href="/assets/app.css">`)...), body[pos:]...)
 
 			c.Response().SetBody(newBody)
 			c.Response().Header.SetContentLength(len(newBody))
@@ -308,7 +349,92 @@ func runServe(cmd *cobra.Command, args []string) error {
 		},
 	})
 
-	app.Patch("/api/update-translation", func(c *fiber.Ctx) error {
+	// Upload and translate endpoint
+	app.Post("/api/translate", func(c *fiber.Ctx) error {
+		file, err := c.FormFile("epub")
+		if err != nil {
+			return c.Status(400).JSON(fiber.Map{"error": "No EPUB file provided"})
+		}
+
+		sourceLang := c.FormValue("source", "English")
+		targetLang := c.FormValue("target", "Dutch")
+		isBilingual := c.FormValue("bilingual") == "true"
+
+		// Save uploaded file
+		uploadPath := filepath.Join("/app/uploads", file.Filename)
+		if err := c.SaveFile(file, uploadPath); err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to save file: " + err.Error()})
+		}
+
+		// Get the actual unpack destination
+		unpackDir, err := util.GetUnzipDestination(uploadPath)
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to determine unpack path: " + err.Error()})
+		}
+
+		// Run unpack command
+		if err := Unpack.RunE(&cobra.Command{}, []string{uploadPath}); err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to unpack EPUB: " + err.Error()})
+		}
+
+		// Clean
+		cleanCmd := &cobra.Command{}
+		cleanCmd.SetContext(context.Background())
+		cleanCmd.Flags().Int("workers", runtime.NumCPU(), "Number of worker goroutines")
+		if err := Clean.RunE(cleanCmd, []string{unpackDir}); err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to clean EPUB: " + err.Error()})
+		}
+
+		// Mark
+		markCmd := &cobra.Command{}
+		markCmd.SetContext(context.Background())
+		markCmd.Flags().Int("workers", runtime.NumCPU(), "Number of worker goroutines")
+		if err := Mark.RunE(markCmd, []string{unpackDir}); err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to mark EPUB: " + err.Error()})
+		}
+
+		// Translate
+		os.Setenv("SOURCE_LANGUAGE", sourceLang)
+		os.Setenv("TARGET_LANGUAGE", targetLang)
+		translateCmd := &cobra.Command{}
+		translateCmd.SetContext(context.Background())
+		if err := Translate.RunE(translateCmd, []string{unpackDir}); err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to translate: " + err.Error()})
+		}
+
+		// Styling
+		stylingCmd := &cobra.Command{}
+		stylingCmd.SetContext(context.Background())
+		stylingCmd.Flags().String("hide", "", "Hide source or target text")
+		if isBilingual {
+			if err := Styling.RunE(stylingCmd, []string{unpackDir}); err != nil {
+				slog.Warn("Styling failed: " + err.Error())
+			}
+		} else {
+			stylingCmd.Flags().Set("hide", "source")
+			if err := Styling.RunE(stylingCmd, []string{unpackDir}); err != nil {
+				slog.Warn("Styling failed: " + err.Error())
+			}
+		}
+
+		// Pack
+		packDir := filepath.Join("/app/uploads", strings.TrimSuffix(file.Filename, ".epub")+"-translated.epub")
+		packCmd := &cobra.Command{}
+		packCmd.SetContext(context.Background())
+		if err := Pack.RunE(packCmd, []string{unpackDir, packDir}); err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to pack translated book: " + err.Error()})
+		}
+
+		return c.JSON(fiber.Map{
+			"message":      "Translation completed successfully",
+			"output_dir":   packDir,
+			"source_lang":  sourceLang,
+			"target_lang":  targetLang,
+			"bilingual":    isBilingual,
+		})
+	})
+
+	app.Post("/api/update-translation", func(c *fiber.Ctx) error {
 		var req TranslateRequest
 		if err := c.BodyParser(&req); err != nil {
 			return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})

@@ -1,11 +1,15 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"math"
 	"math/rand"
+	"net/http"
 	"os"
 	"os/signal"
 	"path"
@@ -23,6 +27,132 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/time/rate"
 )
+
+// HermesOpenAPIRequest represents the request body for Hermes OpenAPI
+type HermesOpenAPIRequest struct {
+	Model       string        `json:"model"`
+	Messages    []Message     `json:"messages"`
+	Temperature float32       `json:"temperature"`
+	MaxTokens   int           `json:"max_tokens,omitempty"`
+}
+
+type Message struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
+}
+
+// HermesOpenAPIResponse represents the response from Hermes OpenAPI
+type HermesOpenAPIResponse struct {
+	Choices []struct {
+		Message struct {
+			Content string `json:"content"`
+		} `json:"message"`
+	} `json:"choices"`
+}
+
+// translateWithHermesOpenAPI uses the private Hermes OpenAPI backend
+func translateWithHermesOpenAPI(content string, sourceLang, targetLang, bookTitle string) (string, error) {
+	baseURL := os.Getenv("HERMES_OPENAPI_URL")
+	if baseURL == "" {
+		baseURL = "http://host.docker.internal:8642/v1/chat/completions"
+	}
+
+	// Create translation prompt
+	systemPrompt := fmt.Sprintf(`You are a professional translator. Translate the following text from %s to %s.
+Maintain all HTML tags exactly as they are. Only output the translated text with HTML tags preserved.
+Book title: %s
+
+Do not add any explanations, introductions, or extra text.`, sourceLang, targetLang, bookTitle)
+
+	request := HermesOpenAPIRequest{
+		Model:       "qwen",
+		Temperature: 0.7,
+		MaxTokens:   4096,
+		Messages: []Message{
+			{Role: "system", Content: systemPrompt},
+			{Role: "user", Content: content},
+		},
+	}
+
+	jsonData, err := json.Marshal(request)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	client := &http.Client{Timeout: 300 * time.Second}
+	req, err := http.NewRequest("POST", baseURL, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return "", fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	// Add API_SERVER_KEY header if configured (required by Hermes gateway)
+	if apiKey := os.Getenv("API_SERVER_KEY"); apiKey != "" {
+		// Try both the raw key and Bearer prefix
+		if strings.HasPrefix(apiKey, "Bearer ") {
+			req.Header.Set("Authorization", apiKey)
+		} else {
+			req.Header.Set("API_SERVER_KEY", apiKey)
+			req.Header.Set("Authorization", "Bearer "+apiKey)
+		}
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("failed to call Hermes OpenAPI: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return "", fmt.Errorf("Hermes API error (status %d): %s", resp.StatusCode, string(body))
+	}
+
+	var result HermesOpenAPIResponse
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return "", fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	if len(result.Choices) == 0 {
+		return "", fmt.Errorf("no choices returned from Hermes API")
+	}
+	if result.Choices[0].Message.Content == "" {
+		return "", fmt.Errorf("empty translation content from Hermes API")
+	}
+
+	return result.Choices[0].Message.Content, nil
+}
+
+// TranslateContent chooses the appropriate translation method based on environment
+func TranslateContent(content, sourceLang, targetLang, bookTitle string) (string, error) {
+	// Check if Hermes OpenAPI is configured
+	if os.Getenv("HERMES_OPENAPI_URL") != "" {
+		return translateWithHermesOpenAPI(content, sourceLang, targetLang, bookTitle)
+	}
+
+	// Fallback to Anthropic
+	ctx := context.Background()
+	anthropicTranslator, err := translator.GetAnthropicTranslator(&translator.Config{
+		APIKey:      os.Getenv("ANTHROPIC_KEY"),
+		Model:       string(anthropic.ModelClaude3Dot5SonnetLatest),
+		Temperature: 0.7,
+		MaxTokens:   8192,
+	})
+	if err != nil {
+		return "", fmt.Errorf("error getting Anthropic translator: %v", err)
+	}
+
+	return anthropicTranslator.Translate(ctx, "", content, sourceLang, targetLang, bookTitle)
+}
+
+// hermesTranslator implements translator.Translator using Hermes OpenAPI
+type hermesTranslator struct{}
+
+func (h *hermesTranslator) Translate(ctx context.Context, prompt, content, source, target, bookName string) (string, error) {
+	return translateWithHermesOpenAPI(content, source, target, bookName)
+}
+
+// Import the Hermes OpenAPI translation function
 
 var (
 	sourceLanguage string
@@ -108,14 +238,33 @@ func runTranslate(cmd *cobra.Command, args []string) error {
 
 	limiter := rate.NewLimiter(rate.Every(time.Minute/50), 10)
 
-	anthropicTranslator, err := translator.GetAnthropicTranslator(&translator.Config{
-		APIKey:      os.Getenv("ANTHROPIC_KEY"),
-		Model:       cmd.Flag("model").Value.String(),
-		Temperature: 0.7,
-		MaxTokens:   8192,
-	})
-	if err != nil {
-		return fmt.Errorf("error getting translator: %v", err)
+	// Initialize the model flag if not present
+	if cmd.Flag("model") == nil {
+		cmd.Flags().String("model", "qwen", "Model to use")
+	}
+	modelName := cmd.Flag("model").Value.String()
+	if modelName == "" {
+		modelName = "qwen"
+	}
+
+	// Choose translator: Hermes if configured, otherwise Anthropic
+	var trans translator.Translator
+	
+	if os.Getenv("HERMES_OPENAPI_URL") != "" {
+		// Use Hermes translator (no API key needed)
+		trans = &hermesTranslator{}
+	} else {
+		// Fallback to Anthropic
+		var err error
+		trans, err = translator.GetAnthropicTranslator(&translator.Config{
+			APIKey:      os.Getenv("ANTHROPIC_KEY"),
+			Model:       modelName,
+			Temperature: 0.7,
+			MaxTokens:   8192,
+		})
+		if err != nil {
+			return fmt.Errorf("error getting translator: %v", err)
+		}
 	}
 
 	// 1 worker and 1 job at a time, mean 1 file at a time
@@ -124,7 +273,7 @@ func runTranslate(cmd *cobra.Command, args []string) error {
 		JobBuffer:    1,
 		ResultBuffer: 10,
 	}, func(ctx context.Context, filePath string) error {
-		return processFileDirectly(ctx, filePath, anthropicTranslator, limiter, bookName)
+		return processFileDirectly(ctx, filePath, trans, limiter, bookName)
 	})
 
 	return err
@@ -153,7 +302,7 @@ func processFileDirectly(ctx context.Context, filePath string, translator transl
 
 	// Create batches directly
 	var currentBatch translationBatch
-	maxBatchLength := 3000
+	maxBatchLength := 2000
 
 	elements.Each(func(i int, contentEl *goquery.Selection) {
 		select {
@@ -320,7 +469,7 @@ func retryTranslate(ctx context.Context, t translator.Translator, limiter *rate.
 				return "", fmt.Errorf("rate limiter error: %w", err)
 			}
 
-			translatedContent, err := t.Translate(ctx, "", content, sourceLang, targetLang, bookName)
+			translatedContent, err := TranslateContent(content, sourceLang, targetLang, bookName)
 			if err == nil {
 				return translatedContent, nil
 			}
@@ -349,9 +498,19 @@ func isTranslationValid(original, translated string) bool {
 		return true
 	}
 
+	// If translation is empty or significantly shorter, reject
+	if len(translated) < len(original)/2 {
+		return false
+	}
+
 	// Ensure all HTML tags are preserved
 	originalTags := extractHTMLTags(original)
 	translatedTags := extractHTMLTags(translated)
+
+	if len(originalTags) == 0 {
+		// No tags in original, just check if translation is non-empty
+		return len(translated) > 0
+	}
 
 	if len(originalTags) != len(translatedTags) {
 		return false
