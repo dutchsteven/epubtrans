@@ -1,5 +1,18 @@
 # Changelog
 
+## [3.0.1](https://github.com/dutchsteven/epubtrans/compare/v3.0.0...v3.0.1) (2026-08-19)
+
+
+### Bug Fixes
+
+* Add error logging for invalid translations ([f4e657c](https://github.com/dutchsteven/epubtrans/commit/f4e657c11c2e5dd548174795a4d6d52bf699a2c5))
+* Add nil check for container to prevent panic in upload-only mode ([bff78ba](https://github.com/dutchsteven/epubtrans/commit/bff78ba08b28d2b7c773151f41fc649d101ce44b))
+* Default to Chinese (Simplified) and relax validation for short translations (10%) ([3adb025](https://github.com/dutchsteven/epubtrans/commit/3adb0250eb8cb44a5559f264e1777069aff0a30d))
+* Increase timeout to 900s and simplify system prompt ([61e5b7a](https://github.com/dutchsteven/epubtrans/commit/61e5b7a1c7b276024541aaa11c4c07adbac71a21))
+* Reduce batch size to 1000 for better reliability ([fe0638d](https://github.com/dutchsteven/epubtrans/commit/fe0638d53af985f448ff15c33a4132cf16619e99))
+* Reduce batch size to 2000 and relax validation logic ([0f16638](https://github.com/dutchsteven/epubtrans/commit/0f16638c33f4e0c802a2e6a2b34bbd51a2d43e67))
+* Remove hardcoded IP, rename HERMES_OPENAPI_URL to OPENAPI_URL ([56a6a3b](https://github.com/dutchsteven/epubtrans/commit/56a6a3b0e2343b07c300a58cd6ee728b209faf21))
+
 ## [3.0.0](https://github.com/dutchsteven/epubtrans/compare/v2.11.0...v3.0.0) (2025-02-28)
 
 
