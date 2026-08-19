@@ -8,6 +8,6 @@ services:
       - ./uploads:/app/uploads
       - ./unpackage:/app/unpackage
     environment:
-      - HERMES_OPENAPI_URL=http://192.168.11.171:8000/v1/chat/completions
+      - OPENAPI_URL=http://localhost:8000/v1/chat/completions
     command: ['./epubtrans', 'serve', '/app/uploads', '--port', '3000']
     restart: unless-stopped

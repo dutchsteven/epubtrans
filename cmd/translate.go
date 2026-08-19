@@ -52,7 +52,7 @@ type HermesOpenAPIResponse struct {
 
 // translateWithHermesOpenAPI uses the private Hermes OpenAPI backend
 func translateWithHermesOpenAPI(content string, sourceLang, targetLang, bookTitle string) (string, error) {
-	baseURL := os.Getenv("HERMES_OPENAPI_URL")
+	baseURL := os.Getenv("OPENAPI_URL")
 	if baseURL == "" {
 		baseURL = "http://host.docker.internal:8642/v1/chat/completions"
 	}
@@ -126,7 +126,7 @@ Book title: %s
 // TranslateContent chooses the appropriate translation method based on environment
 func TranslateContent(content, sourceLang, targetLang, bookTitle string) (string, error) {
 	// Check if Hermes OpenAPI is configured
-	if os.Getenv("HERMES_OPENAPI_URL") != "" {
+	if os.Getenv("OPENAPI_URL") != "" {
 		return translateWithHermesOpenAPI(content, sourceLang, targetLang, bookTitle)
 	}
 
@@ -250,7 +250,7 @@ func runTranslate(cmd *cobra.Command, args []string) error {
 	// Choose translator: Hermes if configured, otherwise Anthropic
 	var trans translator.Translator
 	
-	if os.Getenv("HERMES_OPENAPI_URL") != "" {
+	if os.Getenv("OPENAPI_URL") != "" {
 		// Use Hermes translator (no API key needed)
 		trans = &hermesTranslator{}
 	} else {
